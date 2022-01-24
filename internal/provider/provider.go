@@ -3,7 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"os"
 
+	"github.com/gonzolino/terraform-provider-powerdns/internal/powerdns"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -15,9 +18,7 @@ type provider struct {
 	// client can contain the upstream provider SDK or HTTP client used to
 	// communicate with the upstream service. Resource and DataSource
 	// implementations can then make calls using this client.
-	//
-	// TODO: If appropriate, implement upstream provider SDK or HTTP client.
-	// client vendorsdk.ExampleClient
+	client *powerdns.Client
 
 	// configured is set to true at the end of the Configure method.
 	// This can be used in Resource and DataSource implementations to verify
@@ -32,7 +33,8 @@ type provider struct {
 
 // providerData can be used to store data from the Terraform configuration.
 type providerData struct {
-	Example types.String `tfsdk:"example"`
+	APIKey    types.String `tfsdk:"api_key"`
+	ServerURL types.String `tfsdk:"server_url"`
 }
 
 func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
@@ -44,32 +46,65 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		return
 	}
 
+	var apiKey string
+	if data.APIKey.Unknown {
+		resp.Diagnostics.AddWarning("API Key is not set", "API Key is not set. This is required for authentication.")
+		return
+	}
+	if data.APIKey.Null {
+		apiKey = os.Getenv("POWERDNS_API_KEY")
+	} else {
+		apiKey = data.APIKey.Value
+	}
+	if apiKey == "" {
+		resp.Diagnostics.AddError("API Key is not set", "API Key is not set. This is required for authentication.")
+		return
+	}
+
+	var serverURL string
+	if data.ServerURL.Unknown {
+		resp.Diagnostics.AddWarning("Server URL is not set", "Server URL is not set. Can't connect to PowerDNS API.")
+		return
+	}
+	if data.ServerURL.Null {
+		serverURL = os.Getenv("POWERDNS_SERVER_URL")
+	} else {
+		serverURL = data.ServerURL.Value
+	}
+
 	// Configuration values are now available.
-	// if data.Example.Null { /* ... */ }
+	parsedServerURL, err := url.Parse(serverURL)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Server URL",
+			fmt.Sprintf("Invalid server URL: %v", err),
+		)
+		return
+	}
 
-	// If the upstream provider SDK or HTTP client requires configuration, such
-	// as authentication or logging, this is a great opportunity to do so.
-
+	p.client = powerdns.New(ctx, apiKey, parsedServerURL.Host, parsedServerURL.Path, parsedServerURL.Scheme)
 	p.configured = true
 }
 
 func (p *provider) GetResources(ctx context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
-	return map[string]tfsdk.ResourceType{
-		"scaffolding_example": exampleResourceType{},
-	}, nil
+	return map[string]tfsdk.ResourceType{}, nil
 }
 
 func (p *provider) GetDataSources(ctx context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
-	return map[string]tfsdk.DataSourceType{
-		"scaffolding_example": exampleDataSourceType{},
-	}, nil
+	return map[string]tfsdk.DataSourceType{}, nil
 }
 
 func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
-			"example": {
-				MarkdownDescription: "Example provider attribute",
+			"api_key": {
+				MarkdownDescription: "PowerDNS API key for authentication",
+				Optional:            true,
+				Sensitive:           true,
+				Type:                types.StringType,
+			},
+			"server_url": {
+				MarkdownDescription: "PowerDNS server URL",
 				Optional:            true,
 				Type:                types.StringType,
 			},
