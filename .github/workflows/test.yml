@@ -60,5 +60,7 @@ jobs:
       - run: go mod download
       - env:
           TF_ACC: "1"
+          POWERDNS_API_KEY: ${{ secrets.POWERDNS_API_KEY }}
+          POWERDNS_SERVER_URL: ${{ secrets.POWERDNS_SERVER_URL }}
         run: go test -v -cover ./internal/provider/
         timeout-minutes: 10
