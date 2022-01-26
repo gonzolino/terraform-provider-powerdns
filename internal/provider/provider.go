@@ -100,15 +100,16 @@ func (p *provider) GetDataSources(ctx context.Context) (map[string]tfsdk.DataSou
 
 func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		MarkdownDescription: "The PowerDNS provider allows modifying zone content and metadata using the PowerDNS API.",
 		Attributes: map[string]tfsdk.Attribute{
 			"api_key": {
-				MarkdownDescription: "PowerDNS API key for authentication",
+				MarkdownDescription: "PowerDNS API key for authentication. Can be set via environment variable `POWERDNS_API_KEY`.",
 				Optional:            true,
 				Sensitive:           true,
 				Type:                types.StringType,
 			},
 			"server_url": {
-				MarkdownDescription: "PowerDNS server URL",
+				MarkdownDescription: "PowerDNS server URL. Can be set via environment variable `POWERDNS_SERVER_URL`.",
 				Optional:            true,
 				Type:                types.StringType,
 			},

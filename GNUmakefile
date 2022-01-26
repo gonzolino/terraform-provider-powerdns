@@ -16,4 +16,5 @@ $(SWAGGER_SPEC_FILE):
 
 .PHONY: generate
 generate: $(SWAGGER_SPEC_FILE)
+	go generate
 	$(SWAGGERCMD) generate client -f $(SWAGGER_SPEC_FILE) -c internal/powerdns/client -m internal/powerdns/models
