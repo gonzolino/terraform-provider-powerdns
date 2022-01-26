@@ -19,22 +19,22 @@ func (t zoneDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.D
 
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
-				MarkdownDescription: "Zone ID",
+				MarkdownDescription: "Opaque zone id, assigned by the server.",
 				Type:                types.StringType,
 				Required:            true,
 			},
 			"server_id": {
-				MarkdownDescription: "Server ID",
+				MarkdownDescription: "The id of the server.",
 				Type:                types.StringType,
 				Required:            true,
 			},
 			"name": {
-				MarkdownDescription: "Name of the zone",
+				MarkdownDescription: "Name of the zone (e.g. \"example.com.\") MUST have a trailing dot.",
 				Type:                types.StringType,
 				Computed:            true,
 			},
 			"kind": {
-				MarkdownDescription: "Zone kind, one of \"Native\", \"Master\", \"Slave\"",
+				MarkdownDescription: "Zone kind, one of \"Native\", \"Master\", \"Slave\".",
 				Type:                types.StringType,
 				Computed:            true,
 			},
