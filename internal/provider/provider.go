@@ -94,7 +94,8 @@ func (p *provider) GetResources(ctx context.Context) (map[string]tfsdk.ResourceT
 
 func (p *provider) GetDataSources(ctx context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
 	return map[string]tfsdk.DataSourceType{
-		"powerdns_zone": zoneDataSourceType{},
+		"powerdns_recordset": recordsetDataSourceType{},
+		"powerdns_zone":      zoneDataSourceType{},
 	}, nil
 }
 

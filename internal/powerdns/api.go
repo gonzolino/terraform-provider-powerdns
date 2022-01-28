@@ -90,6 +90,53 @@ func (pdns *Client) DeleteZone(ctx context.Context, serverID, zoneID string) err
 	return err
 }
 
+func (pdns *Client) GetRecordSet(ctx context.Context, serverID, zoneID, recordSetName, recordSetType string) (*RecordSet, error) {
+	params := zones.NewListZoneParamsWithContext(ctx).WithServerID(serverID).WithZoneID(zoneID)
+
+	resp, err := pdns.client.Zones.ListZone(params, pdns.authInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	rrs := []*models.RRSet{}
+	for _, rrset := range resp.Payload.Rrsets {
+		if *rrset.Name == recordSetName {
+			rrs = append(rrs, rrset)
+		}
+	}
+
+	switch len(rrs) {
+	case 0:
+		return nil, fmt.Errorf("record set '%s' not found", recordSetName)
+	case 1:
+		return transformAPIToRecordSet(rrs[0]), nil
+	default:
+		if recordSetType == "" {
+			return nil, errors.New("multiple record sets found with the same name, type required")
+		}
+
+		for _, rrset := range rrs {
+			if *rrset.Type == recordSetType {
+				return transformAPIToRecordSet(rrset), nil
+			}
+		}
+		return nil, fmt.Errorf("record set '%s' with type '%s' not found", recordSetName, recordSetType)
+	}
+}
+
+func transformAPIToRecordSet(rrset *models.RRSet) *RecordSet {
+	records := make([]string, len(rrset.Records))
+	for i, record := range rrset.Records {
+		records[i] = *record.Content
+	}
+	return &RecordSet{
+		Name:    *rrset.Name,
+		Type:    *rrset.Type,
+		TTL:     *rrset.TTL,
+		Records: records,
+	}
+}
+
 func transformZoneToAPI(zone *Zone) *models.Zone {
 	rrsets := make([]*models.RRSet, len(zone.RecordSets))
 	for i, recordset := range zone.RecordSets {
