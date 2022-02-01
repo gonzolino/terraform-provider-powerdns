@@ -3,6 +3,7 @@ package powerdns
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -28,10 +29,11 @@ type Zone struct {
 }
 
 type RecordSet struct {
-	Name    string
-	Type    string
-	TTL     int64
-	Records []string
+	Name       string
+	Type       string
+	TTL        int64
+	Changetype string
+	Records    []string
 }
 
 func New(ctx context.Context, apiKey, serverHost, basePath, scheme string) *Client {
@@ -90,6 +92,41 @@ func (pdns *Client) DeleteZone(ctx context.Context, serverID, zoneID string) err
 	return err
 }
 
+func (pdns *Client) CreateRecordSet(ctx context.Context, serverID, zoneID string, recordSet *RecordSet) (*RecordSet, error) {
+	rrset := transformRecordSetToAPI(recordSet)
+
+	changeTypeReplace := "REPLACE"
+	rrset.Changetype = &changeTypeReplace
+
+	zone := &models.Zone{
+		Rrsets: []*models.RRSet{rrset},
+	}
+
+	params := zones.NewPatchZoneParamsWithContext(ctx).WithServerID(serverID).WithZoneID(zoneID).WithZoneStruct(zone)
+
+	if _, err := pdns.client.Zones.PatchZone(params, pdns.authInfo); err != nil {
+		return nil, err
+	}
+
+	return pdns.GetRecordSet(ctx, serverID, zoneID, recordSet.Name, recordSet.Type)
+}
+
+func (pdns *Client) UpdateRecordSet(ctx context.Context, serverID, zoneID string, recordSet *RecordSet) error {
+	rrset := transformRecordSetToAPI(recordSet)
+
+	changeTypeReplace := "REPLACE"
+	rrset.Changetype = &changeTypeReplace
+
+	zone := &models.Zone{
+		Rrsets: []*models.RRSet{rrset},
+	}
+
+	params := zones.NewPatchZoneParamsWithContext(ctx).WithServerID(serverID).WithZoneID(zoneID).WithZoneStruct(zone)
+
+	_, err := pdns.client.Zones.PatchZone(params, pdns.authInfo)
+	return err
+}
+
 func (pdns *Client) GetRecordSet(ctx context.Context, serverID, zoneID, recordSetName, recordSetType string) (*RecordSet, error) {
 	params := zones.NewListZoneParamsWithContext(ctx).WithServerID(serverID).WithZoneID(zoneID)
 
@@ -124,6 +161,39 @@ func (pdns *Client) GetRecordSet(ctx context.Context, serverID, zoneID, recordSe
 	}
 }
 
+func (pdns *Client) DeleteRecordSet(ctx context.Context, serverID, zoneID string, recordSet *RecordSet) error {
+	rrset := transformRecordSetToAPI(recordSet)
+
+	changeTypeDelete := "DELETE"
+	rrset.Changetype = &changeTypeDelete
+
+	zone := &models.Zone{
+		Rrsets: []*models.RRSet{rrset},
+	}
+
+	params := zones.NewPatchZoneParamsWithContext(ctx).WithServerID(serverID).WithZoneID(zoneID).WithZoneStruct(zone)
+
+	_, err := pdns.client.Zones.PatchZone(params, pdns.authInfo)
+	return err
+}
+
+func transformRecordSetToAPI(recordSet *RecordSet) *models.RRSet {
+	records := make([]*models.Record, len(recordSet.Records))
+	for i, record := range recordSet.Records {
+		record := record
+		records[i] = &models.Record{
+			Content:  &record,
+			Disabled: false,
+		}
+	}
+	return &models.RRSet{
+		Name:    &recordSet.Name,
+		Type:    &recordSet.Type,
+		TTL:     &recordSet.TTL,
+		Records: records,
+	}
+}
+
 func transformAPIToRecordSet(rrset *models.RRSet) *RecordSet {
 	records := make([]string, len(rrset.Records))
 	for i, record := range rrset.Records {
@@ -146,7 +216,6 @@ func transformZoneToAPI(zone *Zone) *models.Zone {
 				Content: &record,
 			}
 		}
-		// TODO: we may have to copy record, else &recordset may all point to the same value
 		rrsets[i] = &models.RRSet{
 			Name:    &recordset.Name,
 			Type:    &recordset.Type,
