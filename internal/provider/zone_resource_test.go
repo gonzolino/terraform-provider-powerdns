@@ -49,14 +49,14 @@ func TestAccPowerdnsZoneResource(t *testing.T) {
 	})
 }
 
-func testAccPowerdnsZoneResourceConfig(serverId, name, kind string) string {
+func testAccPowerdnsZoneResourceConfig(name, serverId, kind string) string {
 	return fmt.Sprintf(`
 resource "powerdns_zone" "test" {
   name = %[1]q
   server_id = %[2]q
   kind = %[3]q
 }
-`, serverId, name, kind)
+`, name, serverId, kind)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"
