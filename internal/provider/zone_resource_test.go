@@ -67,8 +67,9 @@ func randomZoneName(n int) string {
 		zoneName[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
 
-	// Put a '.' between domain and tld and at the end of the zone name
-	sep := rand.Intn(n-2) + 1
+	// Put a '.' between domain and tld and at the end of the zone name.
+	// It must be ensured that sep > 0 && sep < n - 2 to get a valid zone name.
+	sep := rand.Intn(n-3) + 1
 	zoneName[sep] = '.'
 	zoneName[n-1] = '.'
 
