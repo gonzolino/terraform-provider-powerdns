@@ -71,7 +71,10 @@ func (d zoneDataSource) Read(ctx context.Context, req tfsdk.ReadDataSourceReques
 		return
 	}
 
-	tflog.Debug(ctx, "Reading zone", "id", data.Id.Value, "server_id", data.ServerId.Value)
+	tflog.Debug(ctx, "Reading zone", map[string]interface{}{
+		"id":        data.Id.Value,
+		"server_id": data.ServerId.Value,
+	})
 	zone, err := d.provider.client.GetZone(ctx, data.ServerId.Value, data.Id.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get zone '%s': %v", data.Id.Value, err))
@@ -82,7 +85,12 @@ func (d zoneDataSource) Read(ctx context.Context, req tfsdk.ReadDataSourceReques
 	data.Name = types.String{Value: zone.Name}
 	data.Kind = types.String{Value: zone.Kind}
 
-	tflog.Debug(ctx, "Read zone", "id", zone.ID, "server_id", data.ServerId.Value, "name", zone.Name, "kind", zone.Kind)
+	tflog.Debug(ctx, "Read zone", map[string]interface{}{
+		"id":        zone.ID,
+		"server_id": data.ServerId.Value,
+		"name":      zone.Name,
+		"kind":      zone.Kind,
+	})
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

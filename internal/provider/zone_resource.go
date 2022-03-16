@@ -77,7 +77,11 @@ func (r zoneResource) Create(ctx context.Context, req tfsdk.CreateResourceReques
 	zone := &powerdns.Zone{}
 	zoneResourceDataToObject(ctx, data, zone)
 
-	tflog.Debug(ctx, "Creating zone", "server_id", data.ServerId.Value, "name", zone.Name, "kind", zone.Kind)
+	tflog.Debug(ctx, "Creating zone", map[string]interface{}{
+		"server_id": data.ServerId.Value,
+		"name":      zone.Name,
+		"kind":      zone.Kind,
+	})
 	zone, err := r.provider.client.CreateZone(ctx, data.ServerId.Value, zone)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -89,7 +93,12 @@ func (r zoneResource) Create(ctx context.Context, req tfsdk.CreateResourceReques
 	}
 
 	zoneObjectToResourceData(ctx, zone, &data)
-	tflog.Debug(ctx, "Created zone", "id", data.Id.Value, "server_id", data.ServerId.Value, "name", data.Name.Value, "kind", data.Kind.Value)
+	tflog.Debug(ctx, "Created zone", map[string]interface{}{
+		"id":        data.Id.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"kind":      data.Kind.Value,
+	})
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -113,7 +122,10 @@ func (r zoneResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, r
 		id = data.Name.Value
 	}
 
-	tflog.Debug(ctx, "Reading zone", "id", id, "server_id", data.ServerId.Value)
+	tflog.Debug(ctx, "Reading zone", map[string]interface{}{
+		"id":        id,
+		"server_id": data.ServerId.Value,
+	})
 	zone, err := r.provider.client.GetZone(ctx, data.ServerId.Value, id)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get zone '%s': %v", id, err))
@@ -121,7 +133,12 @@ func (r zoneResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, r
 	}
 
 	zoneObjectToResourceData(ctx, zone, &data)
-	tflog.Debug(ctx, "Read zone", "id", data.Id.Value, "server_id", data.ServerId.Value, "name", data.Name.Value, "kind", data.Kind.Value)
+	tflog.Debug(ctx, "Read zone", map[string]interface{}{
+		"id":        data.Id.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"kind":      data.Kind.Value,
+	})
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -148,14 +165,27 @@ func (r zoneResource) Update(ctx context.Context, req tfsdk.UpdateResourceReques
 		id = data.Name.Value
 	}
 
-	tflog.Debug(ctx, "Updating zone", "id", id, "server_id", data.ServerId.Value, "name", zone.Name, "kind", zone.Kind, "dnssec", zone.DNSSec, "masters", zone.Masters)
+	tflog.Debug(ctx, "Updating zone", map[string]interface{}{
+		"id":        id,
+		"server_id": data.ServerId.Value,
+		"name":      zone.Name,
+		"kind":      zone.Kind,
+		"dnssec":    zone.DNSSec,
+		"masters":   zone.Masters,
+	})
 	if err := r.provider.client.UpdateZone(ctx, data.ServerId.Value, id, zone); err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update zone '%s': %v", id, err))
 		return
 	}
-	tflog.Debug(ctx, "Updated zone", "id", id, "server_id", data.ServerId.Value)
+	tflog.Debug(ctx, "Updated zone", map[string]interface{}{
+		"id":        id,
+		"server_id": data.ServerId.Value,
+	})
 
-	tflog.Debug(ctx, "Reading zone", "id", id, "server_id", data.ServerId.Value)
+	tflog.Debug(ctx, "Reading zone", map[string]interface{}{
+		"id":        id,
+		"server_id": data.ServerId.Value,
+	})
 	zone, err := r.provider.client.GetZone(ctx, data.ServerId.Value, id)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get zone '%s': %v", id, err))
@@ -163,7 +193,12 @@ func (r zoneResource) Update(ctx context.Context, req tfsdk.UpdateResourceReques
 	}
 
 	zoneObjectToResourceData(ctx, zone, &data)
-	tflog.Debug(ctx, "Read zone", "id", data.Id.Value, "server_id", data.ServerId.Value, "name", data.Name.Value, "kind", data.Kind.Value)
+	tflog.Debug(ctx, "Read zone", map[string]interface{}{
+		"id":        data.Id.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"kind":      data.Kind.Value,
+	})
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -179,12 +214,18 @@ func (r zoneResource) Delete(ctx context.Context, req tfsdk.DeleteResourceReques
 		return
 	}
 
-	tflog.Debug(ctx, "Deleting zone", "id", data.Id.Value, "server_id", data.ServerId.Value)
+	tflog.Debug(ctx, "Deleting zone", map[string]interface{}{
+		"id":        data.Id.Value,
+		"server_id": data.ServerId.Value,
+	})
 	if err := r.provider.client.DeleteZone(ctx, data.ServerId.Value, data.Id.Value); err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete zone '%s': %v", data.Id.Value, err))
 		return
 	}
-	tflog.Debug(ctx, "Deleted zone", "id", data.Id.Value, "server_id", data.ServerId.Value)
+	tflog.Debug(ctx, "Deleted zone", map[string]interface{}{
+		"id":        data.Id.Value,
+		"server_id": data.ServerId.Value,
+	})
 
 	resp.State.RemoveResource(ctx)
 }
