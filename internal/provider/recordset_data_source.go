@@ -90,7 +90,12 @@ func (d recordsetDataSource) Read(ctx context.Context, req tfsdk.ReadDataSourceR
 		return
 	}
 
-	tflog.Debug(ctx, "Reading record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value, "name", data.Name.Value, "type", data.Type.Value)
+	tflog.Debug(ctx, "Reading record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+	})
 	recordset, err := d.provider.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get record set '%s' (type '%s'): %v", data.Name.Value, data.Type.Value, err))
@@ -111,8 +116,14 @@ func (d recordsetDataSource) Read(ctx context.Context, req tfsdk.ReadDataSourceR
 		Elems:    records,
 	}
 
-	tflog.Debug(ctx, "Read record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value,
-		"name", data.Name.Value, "type", data.Type.Value, "ttl", data.Ttl.Value, "records", data.Records)
+	tflog.Debug(ctx, "Read record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+		"ttl":       data.Ttl.Value,
+		"records":   data.Records,
+	})
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

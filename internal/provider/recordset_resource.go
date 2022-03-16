@@ -101,8 +101,14 @@ func (r recordsetResource) Create(ctx context.Context, req tfsdk.CreateResourceR
 		return
 	}
 
-	tflog.Debug(ctx, "Creating record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value,
-		"name", data.Name.Value, "type", data.Type.Value, "ttl", data.Ttl.Value, "records", data.Records)
+	tflog.Debug(ctx, "Creating record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+		"ttl":       data.Ttl.Value,
+		"records":   data.Records,
+	})
 	recordset, err := r.provider.client.CreateRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -114,8 +120,15 @@ func (r recordsetResource) Create(ctx context.Context, req tfsdk.CreateResourceR
 	}
 
 	recordsetObjectToResourceData(ctx, recordset, &data)
-	tflog.Debug(ctx, "Created record set", "id", data.Id.Value, "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value,
-		"name", data.Name.Value, "type", data.Type.Value, "ttl", data.Ttl.Value, "records", data.Records.Elems)
+	tflog.Debug(ctx, "Created record set", map[string]interface{}{
+		"id":        data.Id.Value,
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+		"ttl":       data.Ttl.Value,
+		"records":   data.Records.Elems,
+	})
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -131,7 +144,12 @@ func (r recordsetResource) Read(ctx context.Context, req tfsdk.ReadResourceReque
 		return
 	}
 
-	tflog.Debug(ctx, "Reading record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value, "name", data.Name.Value, "type", data.Type.Value)
+	tflog.Debug(ctx, "Reading record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+	})
 	recordset, err := r.provider.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get record set '%s' (type '%s'): %v", data.Name.Value, data.Type.Value, err))
@@ -139,8 +157,14 @@ func (r recordsetResource) Read(ctx context.Context, req tfsdk.ReadResourceReque
 	}
 
 	recordsetObjectToResourceData(ctx, recordset, &data)
-	tflog.Debug(ctx, "Read record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value,
-		"name", data.Name.Value, "type", data.Type.Value, "ttl", data.Ttl.Value, "records", data.Records.Elems)
+	tflog.Debug(ctx, "Read record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+		"ttl":       data.Ttl.Value,
+		"records":   data.Records.Elems,
+	})
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -164,16 +188,31 @@ func (r recordsetResource) Update(ctx context.Context, req tfsdk.UpdateResourceR
 		return
 	}
 
-	tflog.Debug(ctx, "Updating record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value,
-		"name", data.Name.Value, "type", data.Type.Value, "ttl", data.Ttl.Value, "records", data.Records.Elems)
+	tflog.Debug(ctx, "Updating record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+		"ttl":       data.Ttl.Value,
+		"records":   data.Records.Elems,
+	})
 	if err := r.provider.client.UpdateRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset); err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update record set '%s': %v", recordset.Name, err))
 		return
 	}
-	tflog.Debug(ctx, "Updated record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value,
-		"name", data.Name.Value, "type", data.Type.Value)
+	tflog.Debug(ctx, "Updated record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+	})
 
-	tflog.Debug(ctx, "Reading record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value, "name", data.Name.Value, "type", data.Type.Value)
+	tflog.Debug(ctx, "Reading record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+	})
 	recordset, err := r.provider.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get record set '%s': %v", data.Name.Value, err))
@@ -181,8 +220,14 @@ func (r recordsetResource) Update(ctx context.Context, req tfsdk.UpdateResourceR
 	}
 
 	recordsetObjectToResourceData(ctx, recordset, &data)
-	tflog.Debug(ctx, "Read record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value,
-		"name", data.Name.Value, "type", data.Type.Value, "ttl", data.Ttl.Value, "records", data.Records.Elems)
+	tflog.Debug(ctx, "Read record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      data.Name.Value,
+		"type":      data.Type.Value,
+		"ttl":       data.Ttl.Value,
+		"records":   data.Records.Elems,
+	})
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -206,12 +251,22 @@ func (r recordsetResource) Delete(ctx context.Context, req tfsdk.DeleteResourceR
 		return
 	}
 
-	tflog.Debug(ctx, "Deleting record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value, "name", recordset.Name, "type", recordset.Type)
+	tflog.Debug(ctx, "Deleting record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      recordset.Name,
+		"type":      recordset.Type,
+	})
 	if err := r.provider.client.DeleteRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset); err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete record set '%s': %v", recordset.Name, err))
 		return
 	}
-	tflog.Debug(ctx, "Deleted record set", "zone_id", data.ZoneId.Value, "server_id", data.ServerId.Value, "name", recordset.Name, "type", recordset.Type)
+	tflog.Debug(ctx, "Deleted record set", map[string]interface{}{
+		"zone_id":   data.ZoneId.Value,
+		"server_id": data.ServerId.Value,
+		"name":      recordset.Name,
+		"type":      recordset.Type,
+	})
 
 	resp.State.RemoveResource(ctx)
 }
