@@ -6,10 +6,12 @@ name: Tests
 on:
   pull_request:
     paths-ignore:
-      - 'README.md'
+      - "README.md"
   push:
+    branches:
+      - main
     paths-ignore:
-      - 'README.md'
+      - "README.md"
 
 # Testing only needs permissions to read the repository contents.
 permissions:
@@ -19,7 +21,7 @@ permissions:
 env:
   # Go language version to use for building. This value should also be updated
   # in the release workflow if changed.
-  GO_VERSION: '1.17'
+  GO_VERSION: "1.17"
 
 jobs:
   # Ensure project builds before running testing matrix
@@ -35,10 +37,56 @@ jobs:
       - run: go mod download
       - run: go build -v .
 
+  setup_test_env:
+    name: Setup Acceptance Test Environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      pdsn_server_url: ${{ steps.server_address.outputs.url }}
+      server_name: ${{ steps.random.outputs.server_name }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: random
+        run: |
+          random_mysql_root_password=$(uuidgen)
+          echo "::add-mask::$random_mysql_root_password"
+          echo "::set-output name=mysql_root_password::$random_mysql_root_password"
+          random_pdns_webserver_password=$(uuidgen)
+          echo "::add-mask::$random_pdns_webserver_password"
+          echo "::set-output name=pdns_webserver_password::$random_pdns_webserver_password"
+          echo "::set-output name=server_name::tf-pdns-$(uuidgen)"
+      - uses: chuhlomin/render-template@v1.5
+        with:
+          template: files/cloud-config.yaml
+          vars: |
+            mysql_root_password: ${{ steps.random.outputs.mysql_root_password }}
+            pdns_api_key: ${{ secrets.POWERDNS_API_KEY }}
+            pdns_webserver_password: ${{ steps.random.outputs.pdns_webserver_password }}
+          result_path: cloud-config.yaml
+      - uses: 3bit/setup-hcloud@v1
+      - run: |
+          hcloud server create --name ${{ steps.random.outputs.server_name }} \
+           --type cx11 \
+           --image docker-ce \
+           --ssh-key terraform-provider-powerdns \
+           --location nbg1 \
+           --user-data-from-file cloud-config.yaml
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+      - id: server_address
+        run: echo "::set-output name=url::http://$(hcloud server ip ${{ steps.random.outputs.server_name }}):8081/api/v1"
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+      # Give the test server some time to start its services
+      - run: sleep 60
+      - run: 'curl -H "X-API-Key: ${{ secrets.POWERDNS_API_KEY }}" -d @files/example-zone.json ${{ steps.server_address.outputs.url }}/servers/localhost/zones'
+
   # Run acceptance tests in a matrix with Terraform CLI versions
   test:
     name: Terraform Provider Acceptance Tests
-    needs: build
+    needs:
+      - build
+      - setup_test_env
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -46,8 +94,8 @@ jobs:
       matrix:
         # list whatever Terraform versions here you would like to support
         terraform:
-          - '1.0.*'
-          - '1.1.*'
+          - "1.0.*"
+          - "1.1.*"
     steps:
       - uses: actions/setup-go@v3
         with:
@@ -61,6 +109,20 @@ jobs:
       - env:
           TF_ACC: "1"
           POWERDNS_API_KEY: ${{ secrets.POWERDNS_API_KEY }}
-          POWERDNS_SERVER_URL: ${{ secrets.POWERDNS_SERVER_URL }}
+          POWERDNS_SERVER_URL: ${{ needs.setup_test_env.outputs.pdsn_server_url }}
         run: go test -v -cover ./internal/provider/
         timeout-minutes: 10
+
+  teardown_test_env:
+    name: Teardown Acceptance Test Environment
+    runs-on: ubuntu-latest
+    needs:
+      - setup_test_env
+      - test
+    if: ${{ always() }}
+    steps:
+      - uses: 3bit/setup-hcloud@v1
+      - run: |
+          hcloud server delete ${{ needs.setup_test_env.outputs.server_name }}
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}

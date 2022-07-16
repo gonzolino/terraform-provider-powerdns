@@ -1,0 +1,40 @@
+#cloud-config
+write_files:
+  - path: /etc/systemd/system/mariadb.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Run mariadb container
+      Requires=docker.service
+      After=docker.service
+
+      [Service]
+      Restart=on-failure
+      ExecStart=/usr/bin/docker run --rm --name mariadb -e MYSQL_ROOT_PASSWORD={{ .mysql_root_password }} mariadb:latest
+      ExecStop=/usr/bin/docker stop -t 2 mariadb
+
+      [Install]
+      WantedBy=multi-user.target
+  - path: /etc/systemd/system/pdns-master.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Run pdns-master container
+      Requires=mariadb.service
+      After=mariadb.service
+
+      [Service]
+      Restart=on-failure
+      ExecStart=/usr/bin/docker run --rm --name pdns-master -p 8081:8081 --hostname ns1.example.com --link mariadb:mysql -e PDNS_master=yes -e PDNS_api=yes -e PDNS_api_key={{ .pdns_api_key }} -e PDNS_webserver=yes -e PDNS_webserver_address=0.0.0.0 -e PDNS_webserver_password={{ .pdns_webserver_password }} -e PDNS_webserver_allow_from=0.0.0.0/0 -e PDNS_version_string=anonymous -e PDNS_default_ttl=1500 pschiffe/pdns-mysql
+      ExecStop=/usr/bin/docker stop -t 2 pdns-master
+
+      [Install]
+      WantedBy=multi-user.target
+runcmd:
+  - systemctl daemon-reload
+  - systemctl enable mariadb pdns-master
+  - systemctl start mariadb
+  - sleep 10
+  - systemctl start pdns-master
