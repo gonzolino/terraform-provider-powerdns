@@ -8,9 +8,9 @@ import (
 	"github.com/gonzolino/terraform-provider-powerdns/internal/powerdns"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -286,10 +286,10 @@ func (r recordsetResource) ImportState(ctx context.Context, req tfsdk.ImportReso
 	recordsetName := splittedID[2]
 	recordsetType := splittedID[3]
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, tftypes.NewAttributePath().WithAttributeName("server_id"), serverID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, tftypes.NewAttributePath().WithAttributeName("zone_id"), zoneID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, tftypes.NewAttributePath().WithAttributeName("name"), recordsetName)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, tftypes.NewAttributePath().WithAttributeName("type"), recordsetType)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("server_id"), serverID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("zone_id"), zoneID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), recordsetName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("type"), recordsetType)...)
 }
 
 func recordsetResourceDataToObject(ctx context.Context, data recordsetResourceData, recordset *powerdns.RecordSet) diag.Diagnostics {
