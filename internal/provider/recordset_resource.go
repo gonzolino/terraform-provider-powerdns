@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -61,7 +63,7 @@ func (t recordsetResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, dia
 	}, nil
 }
 
-func (t recordsetResourceType) NewResource(ctx context.Context, in tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+func (t recordsetResourceType) NewResource(ctx context.Context, in provider.Provider) (resource.Resource, diag.Diagnostics) {
 	provider, diags := convertProviderType(in)
 
 	return recordsetResource{
@@ -80,10 +82,10 @@ type recordsetResourceData struct {
 }
 
 type recordsetResource struct {
-	provider provider
+	provider powerdnsProvider
 }
 
-func (r recordsetResource) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r recordsetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data recordsetResourceData
 
 	diags := req.Config.Get(ctx, &data)
@@ -134,7 +136,7 @@ func (r recordsetResource) Create(ctx context.Context, req tfsdk.CreateResourceR
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r recordsetResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r recordsetResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data recordsetResourceData
 
 	diags := req.State.Get(ctx, &data)
@@ -170,7 +172,7 @@ func (r recordsetResource) Read(ctx context.Context, req tfsdk.ReadResourceReque
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r recordsetResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r recordsetResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data recordsetResourceData
 
 	diags := req.Plan.Get(ctx, &data)
@@ -233,7 +235,7 @@ func (r recordsetResource) Update(ctx context.Context, req tfsdk.UpdateResourceR
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r recordsetResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r recordsetResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data recordsetResourceData
 
 	diags := req.State.Get(ctx, &data)
@@ -271,7 +273,7 @@ func (r recordsetResource) Delete(ctx context.Context, req tfsdk.DeleteResourceR
 	resp.State.RemoveResource(ctx)
 }
 
-func (r recordsetResource) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
+func (r recordsetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	splittedID := strings.Split(req.ID, "/")
 
 	if len(splittedID) != 4 {
