@@ -4,18 +4,42 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gonzolino/terraform-provider-powerdns/internal/powerdns"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type recordsetDataSourceType struct{}
+var _ datasource.DataSource = &RecordsetDataSource{}
 
-func (t recordsetDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func NewRecordsetDataSource() datasource.DataSource {
+	return &RecordsetDataSource{}
+}
+
+// RecordsetDataSource defines the data source implementation.
+type RecordsetDataSource struct {
+	client *powerdns.Client
+}
+
+// RecordsetDataSourceModel describes the data source data model.
+type RecordsetDataSourceModel struct {
+	Id       types.String `tfsdk:"id"`
+	ZoneId   types.String `tfsdk:"zone_id"`
+	ServerId types.String `tfsdk:"server_id"`
+	Name     types.String `tfsdk:"name"`
+	Type     types.String `tfsdk:"type"`
+	Ttl      types.Int64  `tfsdk:"ttl"`
+	Records  types.List   `tfsdk:"records"`
+}
+
+func (d *RecordsetDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_recordset"
+}
+
+func (d RecordsetDataSource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "PowerDNS Resource Record Set",
@@ -60,33 +84,31 @@ func (t recordsetDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, d
 	}, nil
 }
 
-func (t recordsetDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
+func (d *RecordsetDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
 
-	return recordsetDataSource{
-		provider: provider,
-	}, diags
+	client, ok := req.ProviderData.(*powerdns.Client)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *powerdns.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	d.client = client
 }
 
-type recordsetDataSourceData struct {
-	Id       types.String `tfsdk:"id"`
-	ZoneId   types.String `tfsdk:"zone_id"`
-	ServerId types.String `tfsdk:"server_id"`
-	Name     types.String `tfsdk:"name"`
-	Type     types.String `tfsdk:"type"`
-	Ttl      types.Int64  `tfsdk:"ttl"`
-	Records  types.List   `tfsdk:"records"`
-}
+func (d RecordsetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data RecordsetDataSourceModel
 
-type recordsetDataSource struct {
-	provider powerdnsProvider
-}
-
-func (d recordsetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data recordsetDataSourceData
-
-	diags := req.Config.Get(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	// Read Terraform configuration data into the model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -98,7 +120,7 @@ func (d recordsetDataSource) Read(ctx context.Context, req datasource.ReadReques
 		"name":      data.Name.Value,
 		"type":      data.Type.Value,
 	})
-	recordset, err := d.provider.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
+	recordset, err := d.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get record set '%s' (type '%s'): %v", data.Name.Value, data.Type.Value, err))
 		return
@@ -127,6 +149,5 @@ func (d recordsetDataSource) Read(ctx context.Context, req datasource.ReadReques
 		"records":   data.Records,
 	})
 
-	diags = resp.State.Set(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
