@@ -7,41 +7,60 @@ import (
 	"os"
 
 	"github.com/gonzolino/terraform-provider-powerdns/internal/powerdns"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// provider satisfies the tfsdk.Provider interface and usually is included
-// with all Resource and DataSource implementations.
-type powerdnsProvider struct {
-	// client can contain the upstream provider SDK or HTTP client used to
-	// communicate with the upstream service. Resource and DataSource
-	// implementations can then make calls using this client.
-	client *powerdns.Client
+// Ensure PowerdnsProvider satisfies various provider interfaces.
+var _ provider.Provider = &PowerdnsProvider{}
+var _ provider.ProviderWithMetadata = &PowerdnsProvider{}
 
-	// configured is set to true at the end of the Configure method.
-	// This can be used in Resource and DataSource implementations to verify
-	// that the provider was previously configured.
-	configured bool
-
+// PowerdnsProvider defines the provider implementation.
+type PowerdnsProvider struct {
 	// version is set to the provider version on release, "dev" when the
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
 }
 
-// providerData can be used to store data from the Terraform configuration.
-type providerData struct {
+// PowerdnsProviderModel describes the provider data model.
+type PowerdnsProviderModel struct {
 	APIKey    types.String `tfsdk:"api_key"`
 	ServerURL types.String `tfsdk:"server_url"`
 }
 
-func (p *powerdnsProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data providerData
-	diags := req.Config.Get(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+func (p *PowerdnsProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "powerdns"
+	resp.Version = p.version
+}
+
+func (p *PowerdnsProvider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return tfsdk.Schema{
+		MarkdownDescription: "The PowerDNS provider allows modifying zone content and metadata using the PowerDNS API.",
+		Attributes: map[string]tfsdk.Attribute{
+			"api_key": {
+				MarkdownDescription: "PowerDNS API key for authentication. Can be set via environment variable `POWERDNS_API_KEY`.",
+				Optional:            true,
+				Sensitive:           true,
+				Type:                types.StringType,
+			},
+			"server_url": {
+				MarkdownDescription: "PowerDNS server URL. Can be set via environment variable `POWERDNS_SERVER_URL`.",
+				Optional:            true,
+				Type:                types.StringType,
+			},
+		},
+	}, nil
+}
+
+func (p *PowerdnsProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var data PowerdnsProviderModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -83,76 +102,29 @@ func (p *powerdnsProvider) Configure(ctx context.Context, req provider.Configure
 		return
 	}
 
-	p.client = powerdns.New(ctx, apiKey, parsedServerURL.Host, parsedServerURL.Path, parsedServerURL.Scheme)
-	p.configured = true
+	client := powerdns.New(ctx, apiKey, parsedServerURL.Host, parsedServerURL.Path, parsedServerURL.Scheme)
+	resp.DataSourceData = client
+	resp.ResourceData = client
 }
 
-func (p *powerdnsProvider) GetResources(_ context.Context) (map[string]provider.ResourceType, diag.Diagnostics) {
-	return map[string]provider.ResourceType{
-		"powerdns_recordset": recordsetResourceType{},
-		"powerdns_zone":      zoneResourceType{},
-	}, nil
+func (p *PowerdnsProvider) Resources(_ context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		NewRecordsetResource,
+		NewZoneResource,
+	}
 }
 
-func (p *powerdnsProvider) GetDataSources(_ context.Context) (map[string]provider.DataSourceType, diag.Diagnostics) {
-	return map[string]provider.DataSourceType{
-		"powerdns_recordset": recordsetDataSourceType{},
-		"powerdns_zone":      zoneDataSourceType{},
-	}, nil
-}
-
-func (p *powerdnsProvider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
-		MarkdownDescription: "The PowerDNS provider allows modifying zone content and metadata using the PowerDNS API.",
-		Attributes: map[string]tfsdk.Attribute{
-			"api_key": {
-				MarkdownDescription: "PowerDNS API key for authentication. Can be set via environment variable `POWERDNS_API_KEY`.",
-				Optional:            true,
-				Sensitive:           true,
-				Type:                types.StringType,
-			},
-			"server_url": {
-				MarkdownDescription: "PowerDNS server URL. Can be set via environment variable `POWERDNS_SERVER_URL`.",
-				Optional:            true,
-				Type:                types.StringType,
-			},
-		},
-	}, nil
+func (p *PowerdnsProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{
+		NewRecordsetDataSource,
+		NewZoneDataSource,
+	}
 }
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &powerdnsProvider{
+		return &PowerdnsProvider{
 			version: version,
 		}
 	}
-}
-
-// convertProviderType is a helper function for NewResource and NewDataSource
-// implementations to associate the concrete provider type. Alternatively,
-// this helper can be skipped and the provider type can be directly type
-// asserted (e.g. provider: in.(*provider)), however using this can prevent
-// potential panics.
-func convertProviderType(in provider.Provider) (powerdnsProvider, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	p, ok := in.(*powerdnsProvider)
-
-	if !ok {
-		diags.AddError(
-			"Unexpected Provider Instance Type",
-			fmt.Sprintf("While creating the data source or resource, an unexpected provider type (%T) was received. This is always a bug in the provider code and should be reported to the provider developers.", p),
-		)
-		return powerdnsProvider{}, diags
-	}
-
-	if p == nil {
-		diags.AddError(
-			"Unexpected Provider Instance Type",
-			"While creating the data source or resource, an unexpected empty provider instance was received. This is always a bug in the provider code and should be reported to the provider developers.",
-		)
-		return powerdnsProvider{}, diags
-	}
-
-	return *p, diags
 }

@@ -8,16 +8,36 @@ import (
 	"github.com/gonzolino/terraform-provider-powerdns/internal/powerdns"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type zoneResourceType struct{}
+// Ensure provider defined types fully satisfy framework interfaces
+var _ resource.Resource = &ZoneResource{}
+var _ resource.ResourceWithImportState = &ZoneResource{}
 
-func (t zoneResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func NewZoneResource() resource.Resource {
+	return &ZoneResource{}
+}
+
+type ZoneResource struct {
+	client *powerdns.Client
+}
+
+type ZoneResourceModel struct {
+	Id       types.String `tfsdk:"id"`
+	ServerId types.String `tfsdk:"server_id"`
+	Name     types.String `tfsdk:"name"`
+	Kind     types.String `tfsdk:"kind"`
+}
+
+func (r *ZoneResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_zone"
+}
+
+func (t *ZoneResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "PowerDNS Zone",
@@ -47,30 +67,31 @@ func (t zoneResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Dia
 	}, nil
 }
 
-func (t zoneResourceType) NewResource(ctx context.Context, in provider.Provider) (resource.Resource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
+func (r *ZoneResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
 
-	return zoneResource{
-		provider: provider,
-	}, diags
+	client, ok := req.ProviderData.(*powerdns.Client)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *powerdns.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.client = client
 }
 
-type zoneResourceData struct {
-	Id       types.String `tfsdk:"id"`
-	ServerId types.String `tfsdk:"server_id"`
-	Name     types.String `tfsdk:"name"`
-	Kind     types.String `tfsdk:"kind"`
-}
+func (r *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data ZoneResourceModel
 
-type zoneResource struct {
-	provider powerdnsProvider
-}
-
-func (r zoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data zoneResourceData
-
-	diags := req.Config.Get(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -84,7 +105,7 @@ func (r zoneResource) Create(ctx context.Context, req resource.CreateRequest, re
 		"name":      zone.Name,
 		"kind":      zone.Kind,
 	})
-	zone, err := r.provider.client.CreateZone(ctx, data.ServerId.Value, zone)
+	zone, err := r.client.CreateZone(ctx, data.ServerId.Value, zone)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"API Error",
@@ -102,15 +123,15 @@ func (r zoneResource) Create(ctx context.Context, req resource.CreateRequest, re
 		"kind":      data.Kind.Value,
 	})
 
-	diags = resp.State.Set(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data zoneResourceData
+func (r *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data ZoneResourceModel
 
-	diags := req.State.Get(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	// Read Terraform prior state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -128,7 +149,7 @@ func (r zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		"id":        id,
 		"server_id": data.ServerId.Value,
 	})
-	zone, err := r.provider.client.GetZone(ctx, data.ServerId.Value, id)
+	zone, err := r.client.GetZone(ctx, data.ServerId.Value, id)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get zone '%s': %v", id, err))
 		return
@@ -142,15 +163,15 @@ func (r zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		"kind":      data.Kind.Value,
 	})
 
-	diags = resp.State.Set(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r zoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data zoneResourceData
+func (r *ZoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data ZoneResourceModel
 
-	diags := req.Plan.Get(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -175,7 +196,7 @@ func (r zoneResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		"dnssec":    zone.DNSSec,
 		"masters":   zone.Masters,
 	})
-	if err := r.provider.client.UpdateZone(ctx, data.ServerId.Value, id, zone); err != nil {
+	if err := r.client.UpdateZone(ctx, data.ServerId.Value, id, zone); err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update zone '%s': %v", id, err))
 		return
 	}
@@ -188,7 +209,7 @@ func (r zoneResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		"id":        id,
 		"server_id": data.ServerId.Value,
 	})
-	zone, err := r.provider.client.GetZone(ctx, data.ServerId.Value, id)
+	zone, err := r.client.GetZone(ctx, data.ServerId.Value, id)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get zone '%s': %v", id, err))
 		return
@@ -202,15 +223,15 @@ func (r zoneResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		"kind":      data.Kind.Value,
 	})
 
-	diags = resp.State.Set(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data zoneResourceData
+func (r *ZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data ZoneResourceModel
 
-	diags := req.State.Get(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	// Read Terraform prior state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -220,7 +241,7 @@ func (r zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		"id":        data.Id.Value,
 		"server_id": data.ServerId.Value,
 	})
-	if err := r.provider.client.DeleteZone(ctx, data.ServerId.Value, data.Id.Value); err != nil {
+	if err := r.client.DeleteZone(ctx, data.ServerId.Value, data.Id.Value); err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete zone '%s': %v", data.Id.Value, err))
 		return
 	}
@@ -232,7 +253,7 @@ func (r zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	resp.State.RemoveResource(ctx)
 }
 
-func (r zoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *ZoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	splittedID := strings.Split(req.ID, "/")
 
 	if len(splittedID) != 2 {
@@ -252,13 +273,13 @@ func (r zoneResource) ImportState(ctx context.Context, req resource.ImportStateR
 	// tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
 }
 
-func zoneResourceDataToObject(ctx context.Context, data zoneResourceData, zone *powerdns.Zone) {
+func zoneResourceDataToObject(ctx context.Context, data ZoneResourceModel, zone *powerdns.Zone) {
 	zone.ID = data.Id.Value
 	zone.Name = data.Name.Value
 	zone.Kind = data.Kind.Value
 }
 
-func zoneObjectToResourceData(ctx context.Context, zone *powerdns.Zone, data *zoneResourceData) {
+func zoneObjectToResourceData(ctx context.Context, zone *powerdns.Zone, data *ZoneResourceModel) {
 	data.Id = types.String{Value: zone.ID}
 	data.Name = types.String{Value: zone.Name}
 	data.Kind = types.String{Value: zone.Kind}

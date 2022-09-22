@@ -9,16 +9,39 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type recordsetResourceType struct{}
+// Ensure provider defined types fully satisfy framework interfaces
+var _ resource.Resource = &RecordsetResource{}
+var _ resource.ResourceWithImportState = &RecordsetResource{}
 
-func (t recordsetResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func NewRecordsetResource() resource.Resource {
+	return &RecordsetResource{}
+}
+
+type RecordsetResource struct {
+	client *powerdns.Client
+}
+
+type RecordsetResourceModel struct {
+	Id       types.String `tfsdk:"id"`
+	ZoneId   types.String `tfsdk:"zone_id"`
+	ServerId types.String `tfsdk:"server_id"`
+	Name     types.String `tfsdk:"name"`
+	Type     types.String `tfsdk:"type"`
+	Ttl      types.Int64  `tfsdk:"ttl"`
+	Records  types.List   `tfsdk:"records"`
+}
+
+func (r *RecordsetResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_recordset"
+}
+
+func (t RecordsetResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "PowerDNS Zone",
@@ -63,30 +86,28 @@ func (t recordsetResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, dia
 	}, nil
 }
 
-func (t recordsetResourceType) NewResource(ctx context.Context, in provider.Provider) (resource.Resource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
+func (r *RecordsetResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
 
-	return recordsetResource{
-		provider: provider,
-	}, diags
+	client, ok := req.ProviderData.(*powerdns.Client)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *powerdns.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.client = client
 }
 
-type recordsetResourceData struct {
-	Id       types.String `tfsdk:"id"`
-	ZoneId   types.String `tfsdk:"zone_id"`
-	ServerId types.String `tfsdk:"server_id"`
-	Name     types.String `tfsdk:"name"`
-	Type     types.String `tfsdk:"type"`
-	Ttl      types.Int64  `tfsdk:"ttl"`
-	Records  types.List   `tfsdk:"records"`
-}
-
-type recordsetResource struct {
-	provider powerdnsProvider
-}
-
-func (r recordsetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data recordsetResourceData
+func (r RecordsetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data RecordsetResourceModel
 
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -96,7 +117,7 @@ func (r recordsetResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	recordset := &powerdns.RecordSet{}
-	diags = recordsetResourceDataToObject(ctx, data, recordset)
+	diags = RecordsetResourceModelToObject(ctx, data, recordset)
 	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
@@ -111,7 +132,7 @@ func (r recordsetResource) Create(ctx context.Context, req resource.CreateReques
 		"ttl":       data.Ttl.Value,
 		"records":   data.Records,
 	})
-	recordset, err := r.provider.client.CreateRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset)
+	recordset, err := r.client.CreateRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"API Error",
@@ -136,8 +157,8 @@ func (r recordsetResource) Create(ctx context.Context, req resource.CreateReques
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r recordsetResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data recordsetResourceData
+func (r RecordsetResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data RecordsetResourceModel
 
 	diags := req.State.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -152,7 +173,7 @@ func (r recordsetResource) Read(ctx context.Context, req resource.ReadRequest, r
 		"name":      data.Name.Value,
 		"type":      data.Type.Value,
 	})
-	recordset, err := r.provider.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
+	recordset, err := r.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get record set '%s' (type '%s'): %v", data.Name.Value, data.Type.Value, err))
 		return
@@ -172,8 +193,8 @@ func (r recordsetResource) Read(ctx context.Context, req resource.ReadRequest, r
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r recordsetResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data recordsetResourceData
+func (r RecordsetResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data RecordsetResourceModel
 
 	diags := req.Plan.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -183,7 +204,7 @@ func (r recordsetResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	recordset := &powerdns.RecordSet{}
-	recordsetResourceDataToObject(ctx, data, recordset)
+	RecordsetResourceModelToObject(ctx, data, recordset)
 	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
@@ -198,7 +219,7 @@ func (r recordsetResource) Update(ctx context.Context, req resource.UpdateReques
 		"ttl":       data.Ttl.Value,
 		"records":   data.Records.Elems,
 	})
-	if err := r.provider.client.UpdateRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset); err != nil {
+	if err := r.client.UpdateRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset); err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update record set '%s': %v", recordset.Name, err))
 		return
 	}
@@ -215,7 +236,7 @@ func (r recordsetResource) Update(ctx context.Context, req resource.UpdateReques
 		"name":      data.Name.Value,
 		"type":      data.Type.Value,
 	})
-	recordset, err := r.provider.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
+	recordset, err := r.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get record set '%s': %v", data.Name.Value, err))
 		return
@@ -235,8 +256,8 @@ func (r recordsetResource) Update(ctx context.Context, req resource.UpdateReques
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r recordsetResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data recordsetResourceData
+func (r RecordsetResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data RecordsetResourceModel
 
 	diags := req.State.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -246,7 +267,7 @@ func (r recordsetResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	recordset := &powerdns.RecordSet{}
-	recordsetResourceDataToObject(ctx, data, recordset)
+	RecordsetResourceModelToObject(ctx, data, recordset)
 	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
@@ -259,7 +280,7 @@ func (r recordsetResource) Delete(ctx context.Context, req resource.DeleteReques
 		"name":      recordset.Name,
 		"type":      recordset.Type,
 	})
-	if err := r.provider.client.DeleteRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset); err != nil {
+	if err := r.client.DeleteRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, recordset); err != nil {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete record set '%s': %v", recordset.Name, err))
 		return
 	}
@@ -273,7 +294,7 @@ func (r recordsetResource) Delete(ctx context.Context, req resource.DeleteReques
 	resp.State.RemoveResource(ctx)
 }
 
-func (r recordsetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r RecordsetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	splittedID := strings.Split(req.ID, "/")
 
 	if len(splittedID) != 4 {
@@ -294,7 +315,7 @@ func (r recordsetResource) ImportState(ctx context.Context, req resource.ImportS
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("type"), recordsetType)...)
 }
 
-func recordsetResourceDataToObject(ctx context.Context, data recordsetResourceData, recordset *powerdns.RecordSet) diag.Diagnostics {
+func RecordsetResourceModelToObject(ctx context.Context, data RecordsetResourceModel, recordset *powerdns.RecordSet) diag.Diagnostics {
 	var records []string
 	diags := data.Records.ElementsAs(ctx, &records, false)
 	if diags.HasError() {
@@ -309,7 +330,7 @@ func recordsetResourceDataToObject(ctx context.Context, data recordsetResourceDa
 	return diags
 }
 
-func recordsetObjectToResourceData(ctx context.Context, recordset *powerdns.RecordSet, data *recordsetResourceData) {
+func recordsetObjectToResourceData(ctx context.Context, recordset *powerdns.RecordSet, data *RecordsetResourceModel) {
 	records := make([]attr.Value, len(recordset.Records))
 	for i, record := range recordset.Records {
 		records[i] = types.String{Value: record}
