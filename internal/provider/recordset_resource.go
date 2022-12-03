@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -41,49 +41,42 @@ func (r *RecordsetResource) Metadata(ctx context.Context, req resource.MetadataR
 	resp.TypeName = req.ProviderTypeName + "_recordset"
 }
 
-func (t RecordsetResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
-		// This description is used by the documentation generator and the language server.
+func (t RecordsetResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "PowerDNS Zone",
 
-		Attributes: map[string]tfsdk.Attribute{
-			"id": {
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
 				MarkdownDescription: "State ID for the record set (only needed for internal technical purposes).",
-				Type:                types.StringType,
 				Computed:            true,
 			},
-			"zone_id": {
+			"zone_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the zone this record set belongs to.",
-				Type:                types.StringType,
 				Required:            true,
 			},
-			"server_id": {
+			"server_id": schema.StringAttribute{
 				MarkdownDescription: "The id of the server.",
-				Type:                types.StringType,
 				Required:            true,
 			},
-			"name": {
+			"name": schema.StringAttribute{
 				MarkdownDescription: "Name for record set (e.g. \"www.powerdns.com.\")",
-				Type:                types.StringType,
 				Required:            true,
 			},
-			"type": {
+			"type": schema.StringAttribute{
 				MarkdownDescription: "Type of this record (e.g. \"A\", \"PTR\", \"MX\").",
-				Type:                types.StringType,
 				Required:            true,
 			},
-			"ttl": {
+			"ttl": schema.Int64Attribute{
 				MarkdownDescription: "DNS TTL of the records, in seconds.",
-				Type:                types.Int64Type,
 				Required:            true,
 			},
-			"records": {
+			"records": schema.ListAttribute{
 				MarkdownDescription: "All records in this record set.",
-				Type:                types.ListType{ElemType: types.StringType},
+				ElementType:         types.StringType,
 				Required:            true,
 			},
 		},
-	}, nil
+	}
 }
 
 func (r *RecordsetResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

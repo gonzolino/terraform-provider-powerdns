@@ -6,10 +6,9 @@ import (
 	"strings"
 
 	"github.com/gonzolino/terraform-provider-powerdns/internal/powerdns"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -37,34 +36,29 @@ func (r *ZoneResource) Metadata(ctx context.Context, req resource.MetadataReques
 	resp.TypeName = req.ProviderTypeName + "_zone"
 }
 
-func (t *ZoneResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
-		// This description is used by the documentation generator and the language server.
+func (t *ZoneResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "PowerDNS Zone",
 
-		Attributes: map[string]tfsdk.Attribute{
-			"id": {
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
 				MarkdownDescription: "Opaque zone id, assigned by the server.",
-				Type:                types.StringType,
 				Computed:            true,
 			},
-			"server_id": {
+			"server_id": schema.StringAttribute{
 				MarkdownDescription: "The id of the server.",
-				Type:                types.StringType,
 				Required:            true,
 			},
-			"name": {
+			"name": schema.StringAttribute{
 				MarkdownDescription: "Name of the zone (e.g. \"example.com.\") MUST have a trailing dot.",
-				Type:                types.StringType,
 				Required:            true,
 			},
-			"kind": {
+			"kind": schema.StringAttribute{
 				MarkdownDescription: "Zone kind, one of \"Native\", \"Master\", \"Slave\".",
-				Type:                types.StringType,
 				Required:            true,
 			},
 		},
-	}, nil
+	}
 }
 
 func (r *ZoneResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
