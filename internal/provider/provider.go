@@ -67,14 +67,14 @@ func (p *PowerdnsProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	var apiKey string
-	if data.APIKey.Unknown {
+	if data.APIKey.IsUnknown() {
 		resp.Diagnostics.AddWarning("API Key is not set", "API Key is not set. This is required for authentication.")
 		return
 	}
-	if data.APIKey.Null {
+	if data.APIKey.IsNull() {
 		apiKey = os.Getenv("POWERDNS_API_KEY")
 	} else {
-		apiKey = data.APIKey.Value
+		apiKey = data.APIKey.ValueString()
 	}
 	if apiKey == "" {
 		resp.Diagnostics.AddError("API Key is not set", "API Key is not set. This is required for authentication.")
@@ -82,14 +82,14 @@ func (p *PowerdnsProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	var serverURL string
-	if data.ServerURL.Unknown {
+	if data.ServerURL.IsUnknown() {
 		resp.Diagnostics.AddWarning("Server URL is not set", "Server URL is not set. Can't connect to PowerDNS API.")
 		return
 	}
-	if data.ServerURL.Null {
+	if data.ServerURL.IsNull() {
 		serverURL = os.Getenv("POWERDNS_SERVER_URL")
 	} else {
-		serverURL = data.ServerURL.Value
+		serverURL = data.ServerURL.ValueString()
 	}
 
 	// Configuration values are now available.

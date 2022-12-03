@@ -114,40 +114,43 @@ func (d RecordsetDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
+	zoneId := data.ZoneId.ValueString()
+	serverId := data.ServerId.ValueString()
+	recordSetName := data.Name.ValueString()
+	recordSetType := data.Type.ValueString()
 	tflog.Debug(ctx, "Reading record set", map[string]interface{}{
-		"zone_id":   data.ZoneId.Value,
-		"server_id": data.ServerId.Value,
-		"name":      data.Name.Value,
-		"type":      data.Type.Value,
+		"zone_id":   zoneId,
+		"server_id": serverId,
+		"name":      recordSetName,
+		"type":      recordSetType,
 	})
-	recordset, err := d.client.GetRecordSet(ctx, data.ServerId.Value, data.ZoneId.Value, data.Name.Value, data.Type.Value)
+	recordset, err := d.client.GetRecordSet(ctx, serverId, zoneId, recordSetName, recordSetType)
 	if err != nil {
-		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get record set '%s' (type '%s'): %v", data.Name.Value, data.Type.Value, err))
+		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get record set '%s' (type '%s'): %v", recordSetName, recordSetType, err))
 		return
 	}
 
 	records := make([]attr.Value, len(recordset.Records))
 	for i, record := range recordset.Records {
-		records[i] = types.String{Value: record}
+		records[i] = types.StringValue(record)
 	}
 
-	data.Id = types.String{Value: fmt.Sprintf("%s/%s/%s", data.ZoneId.Value, data.Name.Value, data.Type.Value)}
-	data.Name = types.String{Value: recordset.Name}
-	data.Type = types.String{Value: recordset.Type}
-	data.Ttl = types.Int64{Value: recordset.TTL}
-	data.Records = types.List{
-		ElemType: types.StringType,
-		Elems:    records,
-	}
+	var diags diag.Diagnostics
+	data.Id = types.StringValue(fmt.Sprintf("%s/%s/%s", zoneId, recordSetName, recordSetType))
+	data.Name = types.StringValue(recordset.Name)
+	data.Type = types.StringValue(recordset.Type)
+	data.Ttl = types.Int64Value(recordset.TTL)
+	data.Records, diags = types.ListValue(types.StringType, records)
 
 	tflog.Debug(ctx, "Read record set", map[string]interface{}{
-		"zone_id":   data.ZoneId.Value,
-		"server_id": data.ServerId.Value,
-		"name":      data.Name.Value,
-		"type":      data.Type.Value,
-		"ttl":       data.Ttl.Value,
+		"zone_id":   zoneId,
+		"server_id": serverId,
+		"name":      recordSetName,
+		"type":      recordSetType,
+		"ttl":       data.Ttl.ValueInt64(),
 		"records":   data.Records,
 	})
 
+	resp.Diagnostics.Append(diags...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

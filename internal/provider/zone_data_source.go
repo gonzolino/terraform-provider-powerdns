@@ -95,23 +95,25 @@ func (d ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
+	zoneId := data.Id.ValueString()
+	serverId := data.ServerId.ValueString()
 	tflog.Debug(ctx, "Reading zone", map[string]interface{}{
-		"id":        data.Id.Value,
-		"server_id": data.ServerId.Value,
+		"id":        zoneId,
+		"server_id": serverId,
 	})
-	zone, err := d.client.GetZone(ctx, data.ServerId.Value, data.Id.Value)
+	zone, err := d.client.GetZone(ctx, serverId, zoneId)
 	if err != nil {
-		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get zone '%s': %v", data.Id.Value, err))
+		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to get zone '%s': %v", zoneId, err))
 		return
 	}
 
-	data.Id = types.String{Value: zone.ID}
-	data.Name = types.String{Value: zone.Name}
-	data.Kind = types.String{Value: zone.Kind}
+	data.Id = types.StringValue(zone.ID)
+	data.Name = types.StringValue(zone.Name)
+	data.Kind = types.StringValue(zone.Kind)
 
 	tflog.Debug(ctx, "Read zone", map[string]interface{}{
 		"id":        zone.ID,
-		"server_id": data.ServerId.Value,
+		"server_id": serverId,
 		"name":      zone.Name,
 		"kind":      zone.Kind,
 	})
