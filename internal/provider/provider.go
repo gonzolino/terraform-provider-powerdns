@@ -8,10 +8,9 @@ import (
 
 	"github.com/gonzolino/terraform-provider-powerdns/internal/powerdns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -38,23 +37,21 @@ func (p *PowerdnsProvider) Metadata(ctx context.Context, req provider.MetadataRe
 	resp.Version = p.version
 }
 
-func (p *PowerdnsProvider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func (p *PowerdnsProvider) Schema(_ context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "The PowerDNS provider allows modifying zone content and metadata using the PowerDNS API.",
-		Attributes: map[string]tfsdk.Attribute{
-			"api_key": {
+		Attributes: map[string]schema.Attribute{
+			"api_key": schema.StringAttribute{
 				MarkdownDescription: "PowerDNS API key for authentication. Can be set via environment variable `POWERDNS_API_KEY`.",
 				Optional:            true,
 				Sensitive:           true,
-				Type:                types.StringType,
 			},
-			"server_url": {
+			"server_url": schema.StringAttribute{
 				MarkdownDescription: "PowerDNS server URL. Can be set via environment variable `POWERDNS_SERVER_URL`.",
 				Optional:            true,
-				Type:                types.StringType,
 			},
 		},
-	}, nil
+	}
 }
 
 func (p *PowerdnsProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
@@ -67,14 +64,14 @@ func (p *PowerdnsProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	var apiKey string
-	if data.APIKey.Unknown {
+	if data.APIKey.IsUnknown() {
 		resp.Diagnostics.AddWarning("API Key is not set", "API Key is not set. This is required for authentication.")
 		return
 	}
-	if data.APIKey.Null {
+	if data.APIKey.IsNull() {
 		apiKey = os.Getenv("POWERDNS_API_KEY")
 	} else {
-		apiKey = data.APIKey.Value
+		apiKey = data.APIKey.ValueString()
 	}
 	if apiKey == "" {
 		resp.Diagnostics.AddError("API Key is not set", "API Key is not set. This is required for authentication.")
@@ -82,14 +79,14 @@ func (p *PowerdnsProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	var serverURL string
-	if data.ServerURL.Unknown {
+	if data.ServerURL.IsUnknown() {
 		resp.Diagnostics.AddWarning("Server URL is not set", "Server URL is not set. Can't connect to PowerDNS API.")
 		return
 	}
-	if data.ServerURL.Null {
+	if data.ServerURL.IsNull() {
 		serverURL = os.Getenv("POWERDNS_SERVER_URL")
 	} else {
-		serverURL = data.ServerURL.Value
+		serverURL = data.ServerURL.ValueString()
 	}
 
 	// Configuration values are now available.
