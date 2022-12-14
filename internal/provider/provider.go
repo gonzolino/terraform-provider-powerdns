@@ -16,7 +16,6 @@ import (
 
 // Ensure PowerdnsProvider satisfies various provider interfaces.
 var _ provider.Provider = &PowerdnsProvider{}
-var _ provider.ProviderWithMetadata = &PowerdnsProvider{}
 
 // PowerdnsProvider defines the provider implementation.
 type PowerdnsProvider struct {
