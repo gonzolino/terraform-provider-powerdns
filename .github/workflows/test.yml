@@ -55,7 +55,7 @@ jobs:
           echo "::add-mask::$random_pdns_webserver_password"
           echo "::set-output name=pdns_webserver_password::$random_pdns_webserver_password"
           echo "::set-output name=server_name::tf-pdns-$(uuidgen)"
-      - uses: chuhlomin/render-template@v1.6
+      - uses: chuhlomin/render-template@v1.7
         with:
           template: files/cloud-config.yaml
           vars: |
