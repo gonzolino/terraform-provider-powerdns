@@ -33,7 +33,7 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: go mod download
       - run: go build -v .
 
@@ -45,7 +45,7 @@ jobs:
       pdsn_server_url: ${{ steps.server_address.outputs.url }}
       server_name: ${{ steps.random.outputs.server_name }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: random
         run: |
           random_mysql_root_password=$(uuidgen)
@@ -104,7 +104,7 @@ jobs:
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: go mod download
       - env:
           TF_ACC: "1"
