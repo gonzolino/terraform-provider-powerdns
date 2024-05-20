@@ -37,15 +37,13 @@ data "powerdns_recordset" "example_net_soa" {
 
 ### Required
 
-- **name** (String) Name for record set (e.g. "www.powerdns.com.")
-- **server_id** (String) The id of the server.
-- **type** (String) Type of this record (e.g. "A", "PTR", "MX"). Required if record name is not unique.
-- **zone_id** (String) ID of the zone this record set belongs to.
+- `name` (String) Name for record set (e.g. "www.powerdns.com.")
+- `server_id` (String) The id of the server.
+- `type` (String) Type of this record (e.g. "A", "PTR", "MX"). Required if record name is not unique.
+- `zone_id` (String) ID of the zone this record set belongs to.
 
 ### Read-Only
 
-- **id** (String) State ID for the record set (only needed for internal technical purposes).
-- **records** (List of String) All records in this record set.
-- **ttl** (Number) DNS TTL of the records, in seconds.
-
-
+- `id` (String) State ID for the record set (only needed for internal technical purposes).
+- `records` (List of String) All records in this record set.
+- `ttl` (Number) DNS TTL of the records, in seconds.

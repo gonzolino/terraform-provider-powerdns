@@ -24,5 +24,5 @@ provider "powerdns" {
 
 ### Optional
 
-- **api_key** (String, Sensitive) PowerDNS API key for authentication. Can be set via environment variable `POWERDNS_API_KEY`.
-- **server_url** (String) PowerDNS server URL. Can be set via environment variable `POWERDNS_SERVER_URL`.
+- `api_key` (String, Sensitive) PowerDNS API key for authentication. Can be set via environment variable `POWERDNS_API_KEY`.
+- `server_url` (String) PowerDNS server URL. Can be set via environment variable `POWERDNS_SERVER_URL`.
