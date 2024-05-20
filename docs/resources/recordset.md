@@ -17,15 +17,13 @@ PowerDNS Zone
 
 ### Required
 
-- **name** (String) Name for record set (e.g. "www.powerdns.com.")
-- **records** (List of String) All records in this record set.
-- **server_id** (String) The id of the server.
-- **ttl** (Number) DNS TTL of the records, in seconds.
-- **type** (String) Type of this record (e.g. "A", "PTR", "MX").
-- **zone_id** (String) ID of the zone this record set belongs to.
+- `name` (String) Name for record set (e.g. "www.powerdns.com.")
+- `records` (List of String) All records in this record set.
+- `server_id` (String) The id of the server.
+- `ttl` (Number) DNS TTL of the records, in seconds.
+- `type` (String) Type of this record (e.g. "A", "PTR", "MX").
+- `zone_id` (String) ID of the zone this record set belongs to.
 
 ### Read-Only
 
-- **id** (String) State ID for the record set (only needed for internal technical purposes).
-
-
+- `id` (String) State ID for the record set (only needed for internal technical purposes).

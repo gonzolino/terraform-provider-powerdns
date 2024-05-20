@@ -24,12 +24,10 @@ data "powerdns_zone" "example_net" {
 
 ### Required
 
-- **id** (String) Opaque zone id, assigned by the server.
-- **server_id** (String) The id of the server.
+- `id` (String) Opaque zone id, assigned by the server.
+- `server_id` (String) The id of the server.
 
 ### Read-Only
 
-- **kind** (String) Zone kind, one of "Native", "Master", "Slave".
-- **name** (String) Name of the zone (e.g. "example.com.") MUST have a trailing dot.
-
-
+- `kind` (String) Zone kind, one of "Native", "Master", "Slave".
+- `name` (String) Name of the zone (e.g. "example.com.") MUST have a trailing dot.
