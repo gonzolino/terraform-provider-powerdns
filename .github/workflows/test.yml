@@ -66,7 +66,7 @@ jobs:
       - uses: 3bit/setup-hcloud@v2
       - run: |
           hcloud server create --name ${{ steps.random.outputs.server_name }} \
-           --type cx11 \
+           --type cx22 \
            --image docker-ce \
            --ssh-key terraform-provider-powerdns \
            --location nbg1 \
