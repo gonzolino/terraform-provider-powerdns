@@ -50,11 +50,11 @@ jobs:
         run: |
           random_mysql_root_password=$(uuidgen)
           echo "::add-mask::$random_mysql_root_password"
-          echo "::set-output name=mysql_root_password::$random_mysql_root_password"
+          echo "mysql_root_password=$random_mysql_root_password" >> $GITHUB_OUTPUT
           random_pdns_webserver_password=$(uuidgen)
           echo "::add-mask::$random_pdns_webserver_password"
-          echo "::set-output name=pdns_webserver_password::$random_pdns_webserver_password"
-          echo "::set-output name=server_name::tf-pdns-$(uuidgen)"
+          echo "pdns_webserver_password=$random_pdns_webserver_password" >> $GITHUB_OUTPUT
+          echo "server_name=tf-pdns-$(uuidgen)" >> $GITHUB_OUTPUT
       - uses: chuhlomin/render-template@v1.10
         with:
           template: files/cloud-config.yaml
@@ -66,7 +66,7 @@ jobs:
       - uses: 3bit/setup-hcloud@v2
       - run: |
           hcloud server create --name ${{ steps.random.outputs.server_name }} \
-           --type cx11 \
+           --type cx22 \
            --image docker-ce \
            --ssh-key terraform-provider-powerdns \
            --location nbg1 \
@@ -74,7 +74,7 @@ jobs:
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
       - id: server_address
-        run: echo "::set-output name=url::http://$(hcloud server ip ${{ steps.random.outputs.server_name }}):8081/api/v1"
+        run: echo "url=http://$(hcloud server ip ${{ steps.random.outputs.server_name }}):8081/api/v1" >> $GITHUB_OUTPUT
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
       # Give the test server some time to start its services
@@ -94,8 +94,10 @@ jobs:
       matrix:
         # list whatever Terraform versions here you would like to support
         terraform:
-          - "1.0.*"
-          - "1.1.*"
+          - "1.6.*"
+          - "1.7.*"
+          - "1.8.*"
+          - "1.9.*"
     steps:
       - uses: actions/setup-go@v5
         with:
