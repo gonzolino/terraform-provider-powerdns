@@ -27,7 +27,7 @@ write_files:
 
       [Service]
       Restart=on-failure
-      ExecStart=/usr/bin/docker run --rm --name pdns-master -p 8081:8081 --hostname ns1.example.com --link mariadb:mysql -e PDNS_primary=yes -e PDNS_api=yes -e PDNS_api_key={{ .pdns_api_key }} -e PDNS_webserver=yes -e PDNS_webserver_address=0.0.0.0 -e PDNS_webserver_password={{ .pdns_webserver_password }} -e PDNS_webserver_allow_from=0.0.0.0/0 -e PDNS_version_string=anonymous -e PDNS_default_ttl=1500 pschiffe/pdns-mysql:4.9
+      ExecStart=/usr/bin/docker run --rm --name pdns-master -p 8081:8081 --hostname ns1.example.com --link mariadb:mysql -e PDNS_primary=yes -e PDNS_api=yes -e PDNS_api_key={{ .pdns_api_key }} -e PDNS_webserver=yes -e PDNS_webserver_address=0.0.0.0 -e PDNS_webserver_password={{ .pdns_webserver_password }} -e PDNS_webserver_allow_from=0.0.0.0/0 -e PDNS_version_string=anonymous -e PDNS_default_ttl=1500 pschiffe/pdns-mysql:4.8
       ExecStop=/usr/bin/docker stop -t 2 pdns-master
 
       [Install]
