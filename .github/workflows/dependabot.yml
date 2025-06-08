@@ -1,0 +1,22 @@
+name: Dependabot
+
+on:
+  pull_request:
+
+jobs:
+  approve:
+    name: Approve
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - id: metadata
+        uses: dependabot/fetch-metadata@08eff52bf64351f401fb50d4972fa95b9f2c2d1b # v2.4.0
+      # Approve the PR if the update type is a patch or minor version update
+      - if: contains(fromJson('["version-update:semver-patch", "version-update:semver-minor"]'), steps.metadata.outputs.update-type)
+        run: |
+          gh pr review --approve "${{ github.event.pull_request.html_url }}"
+          gh pr merge --auto --merge "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
