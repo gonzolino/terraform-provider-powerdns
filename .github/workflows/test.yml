@@ -63,9 +63,7 @@ jobs:
             pdns_api_key: ${{ secrets.POWERDNS_API_KEY }}
             pdns_webserver_password: ${{ steps.random.outputs.pdns_webserver_password }}
           result_path: cloud-config.yaml
-      - run: |
-          curl -sSLO https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz
-          sudo tar -C /usr/local/bin --no-same-owner -xzf hcloud-linux-amd64.tar.gz hcloud
+      - uses: hetznercloud/setup-hcloud@v1
       - run: |
           hcloud server create --name ${{ steps.random.outputs.server_name }} \
            --type cx22 \
@@ -125,9 +123,7 @@ jobs:
       - test
     if: ${{ always() }}
     steps:
-      - run: |
-          curl -sSLO https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz
-          sudo tar -C /usr/local/bin --no-same-owner -xzf hcloud-linux-amd64.tar.gz hcloud
+      - uses: hetznercloud/setup-hcloud@v1
       - run: |
           hcloud server delete ${{ needs.setup_test_env.outputs.server_name }}
         env:
