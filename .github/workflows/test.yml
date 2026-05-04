@@ -55,7 +55,7 @@ jobs:
           echo "::add-mask::$random_pdns_webserver_password"
           echo "pdns_webserver_password=$random_pdns_webserver_password" >> $GITHUB_OUTPUT
           echo "server_name=tf-pdns-$(uuidgen)" >> $GITHUB_OUTPUT
-      - uses: chuhlomin/render-template@v1.10
+      - uses: chuhlomin/render-template@v1.12
         with:
           template: files/cloud-config.yaml
           vars: |
