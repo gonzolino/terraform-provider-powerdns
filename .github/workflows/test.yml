@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -45,7 +45,7 @@ jobs:
       pdsn_server_url: ${{ steps.server_address.outputs.url }}
       server_name: ${{ steps.random.outputs.server_name }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: random
         run: |
           random_mysql_root_password=$(uuidgen)
@@ -99,7 +99,7 @@ jobs:
           - "1.8.*"
           - "1.9.*"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
