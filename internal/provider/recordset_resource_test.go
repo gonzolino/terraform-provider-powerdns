@@ -11,7 +11,6 @@ import (
 )
 
 func TestAccPowerdnsRecordsetResource(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
 	recordsetName := randomRecordsetName(5, "example.net.")
 
 	resource.Test(t, resource.TestCase{
@@ -75,9 +74,10 @@ resource "powerdns_recordset" "test" {
 }
 
 func randomRecordsetName(n int, zoneId string) string {
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	recordsetName := make([]byte, n)
 	for i := range recordsetName {
-		recordsetName[i] = letterBytes[rand.Intn(len(letterBytes))]
+		recordsetName[i] = letterBytes[random.Intn(len(letterBytes))]
 	}
 
 	return fmt.Sprintf("%s.%s", recordsetName, zoneId)
