@@ -98,7 +98,14 @@ func (p *PowerdnsProvider) Configure(ctx context.Context, req provider.Configure
 		return
 	}
 
-	client := powerdns.New(ctx, apiKey, parsedServerURL.Host, parsedServerURL.Path, parsedServerURL.Scheme)
+	client, err := powerdns.New(ctx, apiKey, parsedServerURL.Host, parsedServerURL.Path, parsedServerURL.Scheme)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Client Error",
+			fmt.Sprintf("Unable to create PowerDNS client: %v", err),
+		)
+		return
+	}
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
