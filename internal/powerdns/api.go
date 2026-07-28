@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	pdnsclient "github.com/gonzolino/terraform-provider-powerdns/internal/powerdns/client"
 )
@@ -61,7 +62,9 @@ func New(ctx context.Context, apiKey, serverHost, basePath, scheme string) (*Cli
 		return nil
 	}
 
-	client, err := pdnsclient.NewClientWithResponses(baseURL, pdnsclient.WithRequestEditorFn(authEditor))
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+
+	client, err := pdnsclient.NewClientWithResponses(baseURL, pdnsclient.WithHTTPClient(httpClient), pdnsclient.WithRequestEditorFn(authEditor))
 	if err != nil {
 		return nil, fmt.Errorf("creating powerdns client: %w", err)
 	}
@@ -201,6 +204,8 @@ func (pdns *Client) DeleteRecordSet(ctx context.Context, serverID, zoneID string
 
 	changeTypeDelete := "DELETE"
 	rrset.Changetype = &changeTypeDelete
+	rrset.Records = []pdnsclient.Record{}
+	rrset.Ttl = 0
 
 	zone := pdnsclient.Zone{Rrsets: &[]pdnsclient.RRSet{rrset}}
 
@@ -259,13 +264,16 @@ func transformZoneToAPI(zone *Zone) pdnsclient.Zone {
 
 	kind := pdnsclient.ZoneKind(zone.Kind)
 	serial := int(zone.Serial)
+	name := zone.Name
+	dnssec := zone.DNSSec
+	masters := zone.Masters
 
 	return pdnsclient.Zone{
-		Name:    &zone.Name,
+		Name:    &name,
 		Kind:    &kind,
-		Dnssec:  &zone.DNSSec,
+		Dnssec:  &dnssec,
 		Serial:  &serial,
-		Masters: &zone.Masters,
+		Masters: &masters,
 		Rrsets:  &rrsets,
 	}
 }

@@ -2,10 +2,8 @@ package provider
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
@@ -74,10 +72,9 @@ resource "powerdns_recordset" "test" {
 }
 
 func randomRecordsetName(n int, zoneId string) string {
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	recordsetName := make([]byte, n)
 	for i := range recordsetName {
-		recordsetName[i] = letterBytes[random.Intn(len(letterBytes))]
+		recordsetName[i] = letterBytes[testRand.Intn(len(letterBytes))]
 	}
 
 	return fmt.Sprintf("%s.%s", recordsetName, zoneId)

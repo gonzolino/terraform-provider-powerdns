@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
+var testRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
 func TestAccPowerdnsZoneResource(t *testing.T) {
 	zoneName := randomZoneName(12)
 
@@ -61,15 +63,14 @@ resource "powerdns_zone" "test" {
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"
 
 func randomZoneName(n int) string {
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	zoneName := make([]byte, n)
 	for i := range zoneName {
-		zoneName[i] = letterBytes[random.Intn(len(letterBytes))]
+		zoneName[i] = letterBytes[testRand.Intn(len(letterBytes))]
 	}
 
 	// Put a '.' between domain and tld and at the end of the zone name.
 	// It must be ensured that sep > 0 && sep < n - 2 to get a valid zone name.
-	sep := random.Intn(n-3) + 1
+	sep := testRand.Intn(n-3) + 1
 	zoneName[sep] = '.'
 	zoneName[n-1] = '.'
 
