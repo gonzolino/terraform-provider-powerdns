@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 
@@ -74,7 +75,7 @@ resource "powerdns_recordset" "test" {
 func randomRecordsetName(n int, zoneId string) string {
 	recordsetName := make([]byte, n)
 	for i := range recordsetName {
-		recordsetName[i] = letterBytes[testRand.Intn(len(letterBytes))]
+		recordsetName[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
 
 	return fmt.Sprintf("%s.%s", recordsetName, zoneId)
