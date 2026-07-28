@@ -56,7 +56,7 @@ func TestAccPowerdnsRecordsetResource(t *testing.T) {
 func testAccPowerdnsRecordsetResourceConfig(zoneId, serverId, name, typ string, ttl int64, records []string) string {
 	recordBuilder := strings.Builder{}
 	for i, r := range records {
-		recordBuilder.WriteString(fmt.Sprintf("%q", r))
+		fmt.Fprintf(&recordBuilder, "%q", r)
 		if i < len(records)-1 {
 			recordBuilder.WriteRune(',')
 		}
