@@ -80,7 +80,7 @@ jobs:
             pdns_api_key: ${{ secrets.POWERDNS_API_KEY }}
             pdns_webserver_password: ${{ steps.random.outputs.pdns_webserver_password }}
           result_path: cloud-config.yaml
-      - uses: hetznercloud/setup-hcloud@ac9e7d74fb41a3ca44a6a3da123bd5aa70731e3a # v2.0.0
+      - uses: hetznercloud/setup-hcloud@28cdd3fc4a4a8013e86d57c7254be72df92fcc02 # v2.0.1
       - run: |
           hcloud server create --name ${{ steps.random.outputs.server_name }} \
            --type cx23 \
@@ -139,7 +139,7 @@ jobs:
       - test
     if: ${{ always() }}
     steps:
-      - uses: hetznercloud/setup-hcloud@ac9e7d74fb41a3ca44a6a3da123bd5aa70731e3a # v2.0.0
+      - uses: hetznercloud/setup-hcloud@28cdd3fc4a4a8013e86d57c7254be72df92fcc02 # v2.0.1
       - run: |
           hcloud server delete ${{ needs.setup_test_env.outputs.server_name }}
         env:
