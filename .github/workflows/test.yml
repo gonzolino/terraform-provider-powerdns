@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: "go.mod"
           cache: true
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: "go.mod"
           cache: true
@@ -72,7 +72,7 @@ jobs:
           echo "::add-mask::$random_pdns_webserver_password"
           echo "pdns_webserver_password=$random_pdns_webserver_password" >> $GITHUB_OUTPUT
           echo "server_name=tf-pdns-$(uuidgen)" >> $GITHUB_OUTPUT
-      - uses: chuhlomin/render-template@a7c644e341797d050d1cb24332d83791b9a46dae # v1.12
+      - uses: chuhlomin/render-template@c7bbd9cfdcdfe6ad595c5185286862c6f22567b4 # v1.13
         with:
           template: files/cloud-config.yaml
           vars: |
@@ -115,7 +115,7 @@ jobs:
           - "1.14.*"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: "go.mod"
           cache: true
